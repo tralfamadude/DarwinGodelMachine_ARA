@@ -8,3 +8,4 @@ This is the ARA format for "Darwin Gödel Machine: Open-Ended Evolution of Self-
 
 I think it is a great idea. The conceptual slots in the format encourage good, reproducible research. I suppose for the traditional human beings who want to read offline, the ARA format could be input to a pdf generator for narrative form. 
 
+For ToC of the produced files, see [PAPER.md](PAPER.md)
