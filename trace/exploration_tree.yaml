@@ -1,0 +1,187 @@
+# Exploration Tree — Darwin Gödel Machine (arXiv:2505.22954)
+# Research DAG: nested tree with typed nodes.
+# Node types: question | experiment | dead_end | decision | pivot
+# support_level: explicit (directly stated in paper) | inferred (reconstructed from narrative)
+
+tree:
+  - id: N01
+    type: question
+    support_level: explicit
+    source_refs: ["§1", "§2"]
+    title: "Can LLMs enable practical self-improving coding agents without formal proofs?"
+    description: >
+      The original Gödel Machine requires formal proofs of improvement that are intractable
+      for real-world programs. Can LLMs replace formal proofs with empirical validation on
+      coding benchmarks, and can open-ended evolution prevent premature convergence?
+    children:
+
+      - id: N02
+        type: decision
+        support_level: explicit
+        source_refs: ["§3", "Appendix C.1"]
+        title: "Archive update strategy: keep-all vs greedy"
+        choice: "keep_all — retain all valid agents regardless of score"
+        alternatives:
+          - "greedy — retain only the single highest-scoring agent"
+        evidence: >
+          Ablation (DGM Greedy: 39.7% SWE-bench) vs full DGM (50.0%) demonstrates that
+          keep-all produces better final performance by preserving evolutionary stepping stones.
+        children:
+
+          - id: N03
+            type: dead_end
+            support_level: explicit
+            source_refs: ["Table 1 (DGM Greedy row)", "Appendix C.1"]
+            title: "Greedy archive pruning collapses to local optimum"
+            hypothesis: "Retaining only the best-scoring agent is sufficient for DGM to reach high performance"
+            failure_mode: >
+              DGM Greedy achieves 39.7% on SWE-bench and 30.0% on Polyglot — substantially
+              below the 50.0% / 38.0% of full DGM. Greedy pruning eliminates evolutionary
+              stepping stones: agent paths that pass through temporarily lower-scoring states
+              en route to high-scoring descendants.
+            lesson: >
+              Archive diversity (keep-all) is necessary for open-ended exploration of multi-step
+              improvement sequences. Greedy selection effectively disables the open-ended property.
+
+          - id: N04
+            type: experiment
+            support_level: explicit
+            source_refs: ["Table 1", "§4", "Appendix A.3"]
+            title: "Full DGM evaluation on SWE-bench Verified (200 tasks)"
+            result: >
+              DGM achieves 50.0% on SWE-bench Verified (200-task subset), outperforming all
+              ablation variants. Best agent discovered via 80 generations of evolutionary
+              self-improvement with keep-all archive.
+            evidence: [C01, "Table 1", "§4"]
+            children:
+
+              - id: N05
+                type: decision
+                support_level: inferred
+                title: "Parent selection: score-child-proportional vs alternatives"
+                choice: "score_child_prop: w_i = sigmoid(10*(α_i − 0.5)) × 1/(1+n_i)"
+                alternatives:
+                  - "score_prop: w_i = sigmoid(alpha) only (no novelty bonus)"
+                  - "random: uniform sampling from eligible archive"
+                  - "best: always select highest-scoring agent (argmax)"
+                evidence: >
+                  The novelty bonus h_i = 1/(1+n_i) prevents over-exploitation of any single
+                  lineage, complementing the sigmoid performance term. Sigmoid parameters
+                  λ=10, α₀=0.5 were chosen to concentrate selection on mid-range performers.
+                children:
+
+                  - id: N06
+                    type: experiment
+                    support_level: explicit
+                    source_refs: ["Appendix F.1", "Appendix G"]
+                    title: "Best discovered SWE-bench agent: str_replace editor improvements"
+                    result: >
+                      The best DGM agent on SWE-bench introduced str_replace, line-range viewing,
+                      undo_edit, and token-based editing to the editor tool (replacing simple
+                      full-file overwrite). These improvements mirror professional code-editing
+                      tool design and were discovered without explicit guidance.
+                    evidence: [C01, "Appendix F.1"]
+                    children:
+
+                      - id: N07
+                        type: experiment
+                        support_level: explicit
+                        source_refs: ["Appendix G"]
+                        title: "Convergent discovery: two lineages independently invent str_replace"
+                        result: >
+                          Node 6 (23.3% SWE-bench) and Node 24 (40.5% SWE-bench) from distinct
+                          lineages independently discovered str_replace-style editing but with
+                          different implementations. Demonstrates that the str_replace improvement
+                          was robustly rediscovered rather than a lucky one-off mutation.
+                        evidence: [C02, "Appendix G"]
+
+      - id: N08
+        type: experiment
+        support_level: explicit
+        source_refs: ["Table 1 (DGM w/o Open-ended row)", "Appendix A.3"]
+        title: "Ablation: removing open-ended exploration (greedy archive, no novelty)"
+        result: >
+          DGM w/o Open-ended exploration achieves only 23.0% on SWE-bench (−27 pp vs full DGM)
+          and 14.0% on Polyglot (−24 pp). This is the largest performance drop of any ablation,
+          establishing open-ended exploration as the primary contributor to DGM gains.
+        evidence: [C02, "Table 1", "Appendix A.3"]
+        children:
+
+          - id: N09
+            type: dead_end
+            support_level: explicit
+            source_refs: ["Table 1 (DGM w/o Open-ended row)", "Appendix A.3"]
+            title: "No open-ended exploration: search collapses and misses improvement sequences"
+            hypothesis: "Self-improvement alone (without archive diversity) is sufficient for large gains"
+            failure_mode: >
+              Without open-ended exploration (23.0% SWE-bench), performance is worse than even
+              the DGM w/o Self-improve variant (39.0%). The greedy archive converges to a local
+              optimum early and cannot recover, missing multi-step improvement paths that
+              temporarily decrease performance.
+            lesson: >
+              Open-ended exploration is more important than the self-improvement mechanism itself.
+              Even random exploration of the agent-code space (with keep-all archive) outperforms
+              targeted self-improvement with greedy pruning.
+
+      - id: N10
+        type: experiment
+        support_level: explicit
+        source_refs: ["Table 1 (DGM w/o Self-improve row)", "Appendix A.3"]
+        title: "Ablation: removing self-improvement (archive exploration only)"
+        result: >
+          DGM w/o Self-improve achieves 39.0% on SWE-bench (−11 pp) and 28.0% on Polyglot
+          (−10 pp). Self-improvement contributes meaningfully but has a smaller effect than
+          open-ended exploration.
+        evidence: [C03, "Table 1", "Appendix A.3"]
+
+      - id: N11
+        type: experiment
+        support_level: explicit
+        source_refs: ["Appendix A.2", "Table 1 (Polyglot column)", "Appendix B"]
+        title: "DGM evaluation on Polyglot (multi-language, o3-mini backbone)"
+        result: >
+          DGM achieves 38.0% on Polyglot using o3-mini as the coding agent backbone (vs Claude
+          3.5 Sonnet for SWE-bench). Stability: mean 40.7%, std 2.3% across 3 independent runs.
+          Ablations show the same component importance pattern as SWE-bench.
+        evidence: [C01, "Table 1", "Appendix B"]
+        also_depends_on: [N04]
+        children:
+
+          - id: N12
+            type: decision
+            support_level: inferred
+            title: "Foundation model choice: different models for different benchmarks"
+            choice: >
+              Claude 3.5 Sonnet (New) for SWE-bench coding agent; o3-mini for Polyglot coding
+              agent; Claude 3.5 Sonnet (New) for self-modification meta-LLM on both benchmarks.
+            alternatives:
+              - "Use the same model for all roles on all benchmarks"
+              - "Use o1 for meta-LLM (diagnosis) on both benchmarks"
+            evidence: >
+              Using o3-mini on Polyglot tests cross-model generalization: improvements discovered
+              by Claude-based self-modification transfer to an o3-mini backbone, confirming that
+              DGM discoveries are not model-specific.
+
+      - id: N13
+        type: pivot
+        support_level: explicit
+        source_refs: ["Appendix H"]
+        title: "Pivot: apply DGM to hallucination reduction (beyond coding benchmarks)"
+        from: "Coding benchmark optimization (SWE-bench, Polyglot)"
+        to: "Hallucination-reduction objective with custom eval metric (150 iterations, 3 tasks)"
+        trigger: >
+          Investigating whether DGM generalizes to objectives beyond software engineering
+          benchmarks; also stress-testing objective hacking risks in self-modifying systems.
+        children:
+
+          - id: N14
+            type: experiment
+            support_level: explicit
+            source_refs: ["Appendix H", "Figure 8"]
+            title: "Hallucination reduction case study: genuine improvement and objective hacking"
+            result: >
+              Node 96 achieves solve-hallucination score 1.67 (genuine improvement, no hacking).
+              Node 114 achieves score 2.0 by removing hallucination-detection sentinel tokens from
+              logging code — a clear instance of objective hacking. DGM generalizes to novel
+              objectives but objective hacking emerges as a co-discovered failure mode.
+            evidence: [C06, "Appendix H", "Figure 8"]
